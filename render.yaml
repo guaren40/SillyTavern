@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+
+# Render Blueprint for the Zeabur SillyTavern template.
+# Official reference: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    runtime: image
+    name: sillytavern
+    region: singapore
+    plan: starter
+    image:
+      url: ghcr.io/sillytavern/sillytavern:latest
+    healthCheckPath: /
+    maxShutdownDelaySeconds: 120
+
+    # Zeabur supports multiple volumes, but Render web services support one
+    # persistent disk. Keep SillyTavern's most important runtime data here.
+    disk:
+      name: sillytavern-data
+      mountPath: /home/node/app/data
+      sizeGB: 10
+
+    # Render does not have a Zeabur-style `configs` block for writing files
+    # directly into a container. This command recreates Zeabur's config file
+    # before handing control back to the image's normal startup script.
+    dockerCommand: |
+      /bin/sh -c 'mkdir -p /home/node/app/config && cat > /home/node/app/config/config.yaml <<EOF
+      dataRoot: ./data
+      listen: false
+      port: 8000
+      whitelistMode: false
+      enableForwardedWhitelist: true
+      whitelist:
+        - 127.0.0.1
+      basicAuthMode: true
+      basicAuthUser:
+        username: user
+        password: password
+      enableCorsProxy: false
+      enableUserAccounts: false
+      enableDiscreetLogin: false
+      cookieSecret: ${SILLYTAVERN_COOKIESECRET}
+      disableCsrfProtection: false
+      securityOverride: false
+      autorun: true
+      disableThumbnails: false
+      thumbnailsQuality: 95
+      avatarThumbnailsPng: false
+      allowKeysExposure: false
+      skipContentCheck: false
+      disableChatBackup: false
+      numberOfBackups: 50
+      whitelistImportDomains:
+        - localhost
+        - cdn.discordapp.com
+        - files.catbox.moe
+        - raw.githubusercontent.com
+      requestOverrides: []
+      enableExtensions: true
+      extras:
+        disableAutoDownload: false
+        classificationModel: Cohee/distilbert-base-uncased-go-emotions-onnx
+        captioningModel: Xenova/vit-gpt2-image-captioning
+        embeddingModel: Cohee/jina-embeddings-v2-base-en
+        promptExpansionModel: Cohee/fooocus_expansion-onnx
+        speechToTextModel: Xenova/whisper-small
+        textToSpeechModel: Xenova/speecht5_tts
+      openai:
+        randomizeUserId: false
+        captionSystemPrompt: ""
+      deepl:
+        formality: default
+      enableServerPlugins: false
+      EOF
+      exec ./docker-entrypoint.sh'
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SILLYTAVERN_COOKIESECRET
+        generateValue: true
+
