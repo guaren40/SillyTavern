@@ -12,7 +12,6 @@ services:
     image:
       url: ghcr.io/sillytavern/sillytavern:latest
     healthCheckPath: /
-    maxShutdownDelaySeconds: 120
 
     # Zeabur supports multiple volumes, but Render web services support one
     # persistent disk. Keep SillyTavern's most important runtime data here.
